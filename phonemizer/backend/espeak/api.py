@@ -17,15 +17,18 @@
 import atexit
 import ctypes
 import pathlib
+import random
 import shutil
 import sys
 import tempfile
+import time
 import weakref
 from ctypes import CDLL
 from pathlib import Path
 from typing import Union
 
 from phonemizer.backend.espeak.voice import EspeakVoice
+
 
 if sys.platform != 'win32':
     # cause a crash on Windows
@@ -63,7 +66,13 @@ class EspeakAPI:
                 f'failed to load espeak library: {str(error)}') from None
 
         # will be automatically destroyed after use
-        self._tempdir = tempfile.mkdtemp()
+        # self._tempdir = tempfile.mkdtemp(prefix=f"phonemizer_espeak_api_{time.time()}_{random.randint(0, 1000000)}")
+        # Try to use a single file for all processes...
+        cache_dir = pathlib.Path("./.cache/").expanduser().resolve()
+        tempdir = cache_dir / f"{random.randint(0, 100_000_000)}_{time.time()}"
+        tempdir.mkdir(parents=True, exist_ok=True)
+        self._tempdir = tempdir
+        # print("custom tempdir:", self._tempdir)
 
         # properly exit when the wrapper object is destroyed (see
         # https://docs.python.org/3/library/weakref.html#comparing-finalizers-with-del-methods).
@@ -74,10 +83,16 @@ class EspeakAPI:
         if sys.platform == 'win32':  # pragma: nocover
             atexit.register(self._delete_win32)
         else:
+            ...
             weakref.finalize(self, self._delete, self._library, self._tempdir)
 
         espeak_copy = pathlib.Path(self._tempdir) / library_path.name
-        shutil.copy(library_path, espeak_copy, follow_symlinks=False)
+        if not espeak_copy.exists():
+            # print("did not find any copy of espeak.so, so creating one...")
+            shutil.copy(library_path, espeak_copy, follow_symlinks=False)
+        else:
+            ...
+            # print("found copy of espeak.so... all good.")
 
         # finally load the library copy and initialize it. 0x02 is
         # AUDIO_OUTPUT_SYNCHRONOUS in the espeak API
@@ -273,3 +288,6 @@ class EspeakAPI:
             ctypes.POINTER(ctypes.c_uint),
             ctypes.c_void_p]
         return f_synthetize(text_ptr, size, 0, 1, 0, mode, None, None)
+    
+    def __del__(self):
+        print("ESpeak API instance is being deleted. Trying to remove the tempdir holing the espeak binary.")

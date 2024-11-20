@@ -21,6 +21,7 @@ from typing import List, Union, Tuple, Pattern
 from phonemizer.utils import str2list
 from phonemizer.separator import Separator
 
+
 # The punctuation marks considered by default.
 _DEFAULT_MARKS = ';:,.!?¡¿—…"«»“”(){}[]'
 
