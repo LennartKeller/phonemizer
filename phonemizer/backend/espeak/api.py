@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with phonemizer. If not, see <http://www.gnu.org/licenses/>.
 """Low-level bindings to the espeak API"""
-
+import os
 import atexit
 import ctypes
 import pathlib
@@ -68,7 +68,8 @@ class EspeakAPI:
         # will be automatically destroyed after use
         # self._tempdir = tempfile.mkdtemp(prefix=f"phonemizer_espeak_api_{time.time()}_{random.randint(0, 1000000)}")
         # Try to use a single file for all processes...
-        cache_dir = pathlib.Path("./.cache/").expanduser().resolve()
+        cache_dir = os.getenv("CACHE_DIR", "./.cache/")
+        cache_dir = pathlib.Path(cache_dir).expanduser().resolve()
         tempdir = cache_dir / f"{random.randint(0, 100_000_000)}_{time.time()}"
         tempdir.mkdir(parents=True, exist_ok=True)
         self._tempdir = tempdir
